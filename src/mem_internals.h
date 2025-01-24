@@ -66,6 +66,11 @@ void efree_small(Alloc a);
 void efree_medium(Alloc a);
 void efree_large(Alloc a);
 
+void initLinkedList(unsigned long remainingSize);
+void **search_upper_memory(unsigned long init_index);
+void divide_memory(unsigned long init_index, unsigned long current_index);
+void* findBuddy(unsigned long index, void* memSearchBuddy);
+
 #ifdef __cplusplus
 }
 #endif

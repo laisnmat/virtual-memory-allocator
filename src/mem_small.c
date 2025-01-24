@@ -11,10 +11,29 @@
 void *
 emalloc_small(unsigned long size)
 {
-    /* ecrire votre code ici */
-    return (void *)0;
+    if(arena.chunkpool == NULL){
+        unsigned long remainingSize = mem_realloc_small();
+        initLinkedList(remainingSize);
+    }
+    void * next = *((void **)arena.chunkpool);
+    void * currentChunk = mark_memarea_and_get_user_ptr(arena.chunkpool, CHUNKSIZE, SMALL_KIND);
+    arena.chunkpool = next; //prend l'adresse du pointeur de tête et va dans le contenu de la case pointée.
+    return currentChunk; //renvoie le chunk qu'on a extrait de la liste chainée*/
 }
 
 void efree_small(Alloc a) {
-    /* ecrire votre code ici */
+    //assert(a.ptr != NULL);
+    void *next = arena.chunkpool;
+    arena.chunkpool = a.ptr;
+    *((void**)arena.chunkpool) = next;
+}
+
+void initLinkedList(unsigned long remainingSize){
+    void ** currentNode = arena.chunkpool;
+    void ** next = NULL;
+    for(unsigned long i = 0; i<remainingSize; i += CHUNKSIZE){
+        next = (void **)((char*) currentNode + CHUNKSIZE);
+        *currentNode = next;
+        currentNode = next;
+    }
 }

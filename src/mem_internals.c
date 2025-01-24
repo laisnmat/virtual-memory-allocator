@@ -17,18 +17,20 @@ unsigned long knuth_mmix_one_round(unsigned long in)
 
 void *mark_memarea_and_get_user_ptr(void *ptr, unsigned long size, MemKind k)
 {
+    //const unsigned long MARQUAGE = 32;
+    //const unsigned long TAILLE_TOTALE = size + MARQUAGE;
     //ptr pointe vers le début du bloc on pointe vers le début pour écrire size dans 8 octets pour écrire dans 8 octets type long long
-    unsigned long valeur_magique = knuth_mmix_one_round(ptr) & ~(0b11); //on obtient la valeur magique avec pour 2 premiers bits 00 
+    unsigned long valeur_magique = knuth_mmix_one_round((unsigned long)ptr) & ~(0b11ULL); //on obtient la valeur magique avec pour 2 premiers bits 00 
     valeur_magique = valeur_magique | k; //on effectue un ou pour remplir les 2 derniers bits avec la taille MemKind
     unsigned long *ptrCurrent = ptr; //on copie l'adresse initial
     *ptrCurrent = size; //dedans on écrit en unsigned long la taille (donc sur 8 octets taille de unsigned long)
     ptrCurrent = ptrCurrent+1; //maintenant l'adresse rajoute décale de 8 octets
     *ptrCurrent = valeur_magique; //on met la magic value dans le contenu qui décale également de 8 octets;
-    ptrCurrent = ptr+(size/sizeof(unsigned long))-2; //size = taille total du bloc, on prend donc l'adresse du pointeur + la taille total - 16 octets
+    ptrCurrent = (unsigned long *)ptr+(size/sizeof(unsigned long))-2; //size = taille total du bloc, on prend donc l'adresse du pointeur + la taille total - 16 octets
     *ptrCurrent = valeur_magique;
     ptrCurrent = ptrCurrent+1;
     *ptrCurrent = size;
-    ptrCurrent = ptr + 2; //on renvoie le poiteur vers l'adresse où l'utilisateur peut écrire (soit 16 octets après l'adresse initiale)
+    ptrCurrent = (unsigned long *)ptr + 2; //on renvoie le pointeur vers l'adresse où l'utilisateur peut écrire (soit 16 octets après l'adresse initiale)
     return ptrCurrent;
 }
 
@@ -37,16 +39,17 @@ mark_check_and_get_alloc(void *ptr)
 {
     Alloc a = {};
     unsigned long *ptrCurrent = ptr;
-    ptrCurrent = ptrCurrent - 2; //on décale de 16 octets 
+    const unsigned long DECALAGE = 2; //on décale de 16 octets (on met un décalage de 2 en unsigned long donc 16 octets)
+    ptrCurrent = ptrCurrent - DECALAGE; //on décale de 16 octets 
     a.size = *ptrCurrent; //la taille = le contenu qu'on a mit initialement 
     ptrCurrent = ptrCurrent + 1; //pointe vers la magic number
     unsigned long magic_number = *ptrCurrent;
     a.kind = magic_number & 0b11; //assigne la magic number
-    ptrCurrent = ptr+(a.size/8)-2; //pointe vers la magic number de fin
+    ptrCurrent = (unsigned long *)ptr+(a.size/8)-2*DECALAGE; //pointe vers la magic number de fin
     assert(*ptrCurrent == magic_number);  //vérifie que la magic number de début == magic number de fin
     ptrCurrent = ptrCurrent + 1; //pointe vers la taille
     assert(*ptrCurrent == a.size); //vérifie que la taille de début == taille de fin
-    ptrCurrent = ptr - 2;
+    ptrCurrent = (unsigned long *)ptr - DECALAGE;
     a.ptr = ptrCurrent;
     return a;
 }

@@ -18,7 +18,6 @@ MemArena arena = {};
 
 /* ecrire votre code ici */
 
-
 void *
 emalloc(unsigned long size)
 {
