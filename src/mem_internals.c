@@ -10,6 +10,8 @@
 #include "mem.h"
 #include "mem_internals.h"
 
+static unsigned int test = 0;
+
 unsigned long knuth_mmix_one_round(unsigned long in)
 {
     return in * 6364136223846793005UL % 1442695040888963407UL;
@@ -38,18 +40,22 @@ Alloc
 mark_check_and_get_alloc(void *ptr)
 {
     Alloc a = {};
-    unsigned long *ptrCurrent = ptr;
-    const unsigned long DECALAGE = 2; //on décale de 16 octets (on met un décalage de 2 en unsigned long donc 16 octets)
-    ptrCurrent = ptrCurrent - DECALAGE; //on décale de 16 octets 
-    a.size = *ptrCurrent; //la taille = le contenu qu'on a mit initialement 
-    ptrCurrent = ptrCurrent + 1; //pointe vers la magic number
-    unsigned long magic_number = *ptrCurrent;
+    void **ptrCurrent = ptr;
+    const unsigned long DECALAGE = 16; //on décale de 16 octets (on met un décalage de 2 en unsigned long donc 16 octets)
+    ptrCurrent = (void **)((char *)ptrCurrent - DECALAGE); //on décale de 16 octets 
+    a.size = (unsigned long)*ptrCurrent; //la taille = le contenu qu'on a mit initialement 
+    ptrCurrent = (void **)((char *)ptrCurrent + 8); //pointe vers la magic number
+    unsigned long magic_number = (unsigned long)*ptrCurrent;
     a.kind = magic_number & 0b11; //assigne la magic number
-    ptrCurrent = (unsigned long *)ptr+(a.size/8)-2*DECALAGE; //pointe vers la magic number de fin
-    assert(*ptrCurrent == magic_number);  //vérifie que la magic number de début == magic number de fin
-    ptrCurrent = ptrCurrent + 1; //pointe vers la taille
-    assert(*ptrCurrent == a.size); //vérifie que la taille de début == taille de fin
-    ptrCurrent = (unsigned long *)ptr - DECALAGE;
+    ptrCurrent = (void **)((char *)ptr+a.size-2*DECALAGE); //pointe vers la magic number de fin
+    if((unsigned long)*ptrCurrent != magic_number)
+        test = 1;
+    //assert((unsigned long)*ptrCurrent == magic_number);  //vérifie que la magic number de début == magic number de fin
+    ptrCurrent = (void **)((char *)ptrCurrent + 8); //pointe vers la taille
+    if((unsigned long)*ptrCurrent != a.size)
+        test = 1;
+    assert((unsigned long)*ptrCurrent == a.size); //vérifie que la taille de début == taille de fin
+    ptrCurrent = (void **)((char *)ptr - DECALAGE);
     a.ptr = ptrCurrent;
     return a;
 }

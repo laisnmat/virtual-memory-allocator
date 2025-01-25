@@ -9,8 +9,6 @@
 #include "mem.h"
 #include "mem_internals.h"
 
-static void* testvar = NULL;
-
 unsigned int puiss2(unsigned long size) {
     unsigned int p=0;
     size = size -1; // allocation start in 0
@@ -58,13 +56,12 @@ void **search_upper_memory(unsigned long init_index){
 }
 
 void divide_memory(unsigned long init_index, unsigned long current_index){
-    void** memory = arena.TZL[current_index];
-    *memory = NULL;
     do {
-        memory = arena.TZL[current_index]; //on prend notre poiteur de tête, qui est notre case mémoire
+        void** memory = arena.TZL[current_index]; //on prend notre poiteur de tête, qui est notre case mémoire
         unsigned long buddy_exposant = current_index-1;
         void* buddy = ((char *) memory + (1<<buddy_exposant)); //on divise en 2 la case mémoire (fonctionnement buddy, on prend l'adresse mémoire initial et on rajoute 1 bit à la position k-1)
-        arena.TZL[current_index] = *memory; //on pointe vers la case suivante de la liste chaînée (potentiellement nulle)
+        if(*memory != (void **)0x80)
+            arena.TZL[current_index] = *memory; //on pointe vers la case suivante de la liste chaînée (potentiellement nulle)
         *memory = buddy; //la case mémoire de memory pointe maintenant vers buddy (liste chaînée)
         arena.TZL[--current_index] = memory; //et on stock la case mémoire dans l'indice inférieur
     } while(current_index > init_index); // on s'arrête de diviser jusqu'à ce qu'on atteigne l'index initial (donc la taille initial)
@@ -75,7 +72,7 @@ void efree_medium(Alloc a) {
     unsigned long upper_limit = FIRST_ALLOC_MEDIUM_EXPOSANT + arena.medium_next_exponant;
     //parcourir index changer la condition
     void** currentMem = a.ptr;
-    *currentMem = NULL;
+    vider(currentMem, a.size);
     void** previousMem = currentMem;
     for(index = puiss2(a.size); index < upper_limit && (currentMem = findBuddy(index, currentMem)) != NULL; index++){
         previousMem = currentMem;
@@ -99,14 +96,19 @@ void* findBuddy(unsigned long index, void* memSearchBuddy){
     if(currentMem != NULL){ //alors on a trouvé un buddy, on enlève le buddy de la liste chaînée
         if(previousMem == NULL){
             arena.TZL[index] = *currentMem; //on met l'élément suivant
-            //arena.TZL[index] = NULL;
-            testvar = *currentMem;
-            testvar = *((void**) currentMem);
         }
         else 
             *previousMem = *currentMem; //on fait maintenant pointer previousMem par le suivant du buddy, dans la liste chaînée 
+        *currentMem = NULL; 
         return (uintptr_t)currentMem < (uintptr_t)memSearchBuddy ? currentMem : memSearchBuddy; //on renvoie la plus petite valeur pour renvoyer l'adresse
     }
     //si currentMem == NULL, alors on a pas trouvé de buddy, on renvoie donc NULL
     return NULL;
+}
+
+void vider(void **mem, unsigned long size){
+    for(unsigned int i = 0; i<size; i+=sizeof(void **)){
+        *mem = NULL;
+        mem = (void **)(mem+1);
+    }
 }

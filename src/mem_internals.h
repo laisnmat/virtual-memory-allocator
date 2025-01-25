@@ -70,6 +70,7 @@ void initLinkedList(unsigned long remainingSize);
 void **search_upper_memory(unsigned long init_index);
 void divide_memory(unsigned long init_index, unsigned long current_index);
 void* findBuddy(unsigned long index, void* memSearchBuddy);
+void vider(void **mem, unsigned long size);
 
 #ifdef __cplusplus
 }
