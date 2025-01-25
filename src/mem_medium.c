@@ -9,6 +9,7 @@
 #include "mem.h"
 #include "mem_internals.h"
 
+static void* testvar = NULL;
 
 unsigned int puiss2(unsigned long size) {
     unsigned int p=0;
@@ -57,8 +58,10 @@ void **search_upper_memory(unsigned long init_index){
 }
 
 void divide_memory(unsigned long init_index, unsigned long current_index){
+    void** memory = arena.TZL[current_index];
+    *memory = NULL;
     do {
-        void** memory = arena.TZL[current_index]; //on prend notre poiteur de tête, qui est notre case mémoire
+        memory = arena.TZL[current_index]; //on prend notre poiteur de tête, qui est notre case mémoire
         unsigned long buddy_exposant = current_index-1;
         void* buddy = ((char *) memory + (1<<buddy_exposant)); //on divise en 2 la case mémoire (fonctionnement buddy, on prend l'adresse mémoire initial et on rajoute 1 bit à la position k-1)
         arena.TZL[current_index] = *memory; //on pointe vers la case suivante de la liste chaînée (potentiellement nulle)
@@ -94,8 +97,12 @@ void* findBuddy(unsigned long index, void* memSearchBuddy){
     //soit on a trouvé le buddy, soit on a currentMem == NULL
     //on veut renvoyer l'adresse mémoire initial, donc on renvoie la plus petite adresse entre le buddy et la mémoire de base
     if(currentMem != NULL){ //alors on a trouvé un buddy, on enlève le buddy de la liste chaînée
-        if(previousMem == NULL)
+        if(previousMem == NULL){
             arena.TZL[index] = *currentMem; //on met l'élément suivant
+            //arena.TZL[index] = NULL;
+            testvar = *currentMem;
+            testvar = *((void**) currentMem);
+        }
         else 
             *previousMem = *currentMem; //on fait maintenant pointer previousMem par le suivant du buddy, dans la liste chaînée 
         return (uintptr_t)currentMem < (uintptr_t)memSearchBuddy ? currentMem : memSearchBuddy; //on renvoie la plus petite valeur pour renvoyer l'adresse
