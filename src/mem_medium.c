@@ -48,10 +48,14 @@ void **search_upper_memory(unsigned long init_index){
     for (current_index = init_index+1; current_index < upper_limit && arena.TZL[current_index] == NULL; current_index++); //tant qu'on ne trouve pas une case libre ou qu'on n'a pas atteint la limite maximum 
     //si on a atteint la limite maximum on realloc
     if(current_index >= upper_limit){
-        mem_realloc_medium(); //dans ce cas là current_index ==  FIRST_ALLOC_MEDIUM_EXPOSANT + arena.medium_next_exponant qui est l'index où on realloc
+        do { //on realloc jusqu'à disposer d'un bloc au moins aussi grand que demandé
+            mem_realloc_medium();
+            current_index = upper_limit++;
+        } while(current_index < init_index);
     }
     //maintenant qu'on a notre case mémoire, on va vouloir la diviser jusqu'à atteindre notre size initial.
-    divide_memory(init_index, current_index);
+    if(current_index > init_index)
+        divide_memory(init_index, current_index);
     return arena.TZL[init_index]; //on renvoie la case mémoire à l'adresse d'index initial maintenant qu'elle est remplie grâce au divide
 }
 

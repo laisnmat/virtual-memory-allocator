@@ -10,8 +10,6 @@
 #include "mem.h"
 #include "mem_internals.h"
 
-static unsigned int test = 0;
-
 unsigned long knuth_mmix_one_round(unsigned long in)
 {
     return in * 6364136223846793005UL % 1442695040888963407UL;
@@ -19,45 +17,39 @@ unsigned long knuth_mmix_one_round(unsigned long in)
 
 void *mark_memarea_and_get_user_ptr(void *ptr, unsigned long size, MemKind k)
 {
-    //const unsigned long MARQUAGE = 32;
-    //const unsigned long TAILLE_TOTALE = size + MARQUAGE;
+    //les champs du marquage font toujours 8 octets (uint64_t), en 32 comme en 64 bits
     //ptr pointe vers le début du bloc on pointe vers le début pour écrire size dans 8 octets pour écrire dans 8 octets type long long
-    unsigned long valeur_magique = knuth_mmix_one_round((unsigned long)ptr) & ~(0b11ULL); //on obtient la valeur magique avec pour 2 premiers bits 00 
+    uint64_t valeur_magique = knuth_mmix_one_round((unsigned long)ptr) & ~(0b11ULL); //on obtient la valeur magique avec pour 2 premiers bits 00 
     valeur_magique = valeur_magique | k; //on effectue un ou pour remplir les 2 derniers bits avec la taille MemKind
-    unsigned long *ptrCurrent = ptr; //on copie l'adresse initial
-    *ptrCurrent = size; //dedans on écrit en unsigned long la taille (donc sur 8 octets taille de unsigned long)
+    uint64_t *ptrCurrent = ptr; //on copie l'adresse initial
+    *ptrCurrent = size; //dedans on écrit la taille sur 8 octets
     ptrCurrent = ptrCurrent+1; //maintenant l'adresse rajoute décale de 8 octets
     *ptrCurrent = valeur_magique; //on met la magic value dans le contenu qui décale également de 8 octets;
-    ptrCurrent = (unsigned long *)ptr+(size/sizeof(unsigned long))-2; //size = taille total du bloc, on prend donc l'adresse du pointeur + la taille total - 16 octets
+    ptrCurrent = (uint64_t *)ptr+(size/sizeof(uint64_t))-2; //size = taille total du bloc, on prend donc l'adresse du pointeur + la taille total - 16 octets
     *ptrCurrent = valeur_magique;
     ptrCurrent = ptrCurrent+1;
     *ptrCurrent = size;
-    ptrCurrent = (unsigned long *)ptr + 2; //on renvoie le pointeur vers l'adresse où l'utilisateur peut écrire (soit 16 octets après l'adresse initiale)
+    ptrCurrent = (uint64_t *)ptr + 2; //on renvoie le pointeur vers l'adresse où l'utilisateur peut écrire (soit 16 octets après l'adresse initiale)
     return ptrCurrent;
 }
 
 Alloc
 mark_check_and_get_alloc(void *ptr)
 {
-    Alloc a = {};
-    void **ptrCurrent = ptr;
-    const unsigned long DECALAGE = 16; //on décale de 16 octets (on met un décalage de 2 en unsigned long donc 16 octets)
-    ptrCurrent = (void **)((char *)ptrCurrent - DECALAGE); //on décale de 16 octets 
-    a.size = (unsigned long)*ptrCurrent; //la taille = le contenu qu'on a mit initialement 
-    ptrCurrent = (void **)((char *)ptrCurrent + 8); //pointe vers la magic number
-    unsigned long magic_number = (unsigned long)*ptrCurrent;
-    a.kind = magic_number & 0b11; //assigne la magic number
-    ptrCurrent = (void **)((char *)ptr+a.size-2*DECALAGE); //pointe vers la magic number de fin
-    if((unsigned long)*ptrCurrent != magic_number)
-        test = 1;
-    //assert((unsigned long)*ptrCurrent == magic_number);  //vérifie que la magic number de début == magic number de fin
-    ptrCurrent = (void **)((char *)ptrCurrent + 8); //pointe vers la taille
-    if((unsigned long)*ptrCurrent != a.size)
-        test = 1;
-    assert((unsigned long)*ptrCurrent == a.size); //vérifie que la taille de début == taille de fin
-    ptrCurrent = (void **)((char *)ptr - DECALAGE);
-    a.ptr = ptrCurrent;
-    return a;
+    Alloc alloc = {};
+    uint64_t *p = ptr;
+    const unsigned long OFFSET = 16;
+    p = (uint64_t *)((char *)p - OFFSET);
+    alloc.size = *p;
+    p = p + 1;
+    uint64_t magic_number = *p;
+    alloc.kind = magic_number & 0b11;
+    p = (uint64_t *)((char *)ptr+alloc.size-2*OFFSET);
+    assert(*p == magic_number); //un débordement de l'utilisateur modifie le marquage de fin
+    p = p + 1;
+    assert(*p == alloc.size);
+    alloc.ptr = (char *)ptr - OFFSET;
+    return alloc;
 }
 
 

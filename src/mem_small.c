@@ -31,9 +31,10 @@ void efree_small(Alloc a) {
 void initLinkedList(unsigned long remainingSize){
     void ** currentNode = arena.chunkpool;
     void ** next = NULL;
-    for(unsigned long i = 0; i<remainingSize; i += CHUNKSIZE){
+    for(unsigned long i = CHUNKSIZE; i<remainingSize; i += CHUNKSIZE){
         next = (void **)((char*) currentNode + CHUNKSIZE);
         *currentNode = next;
         currentNode = next;
     }
+    *currentNode = NULL; //le dernier chunk termine la liste chainée
 }

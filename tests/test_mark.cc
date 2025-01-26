@@ -15,7 +15,7 @@ using namespace std;
 
 
 TEST( Mark, mmix ) {
-    unsigned long tab[NBCHUNK] = {};
+    uint64_t tab[NBCHUNK] = {};
   
     void *pmem0 = mark_memarea_and_get_user_ptr(tab, 32, SMALL_KIND);
     ASSERT_NE(pmem0, (void*)0);

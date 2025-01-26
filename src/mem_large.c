@@ -11,7 +11,7 @@
 void *
 emalloc_large(unsigned long size)
 {
-    unsigned long taille= size + 32;
+    unsigned long taille= (size + 32 + 7) & ~7UL; //multiple de 8 pour que le marquage de fin reste aligné
     void *newmem =  mmap(0,
 			 taille,
 			 PROT_READ | PROT_WRITE | PROT_EXEC,
